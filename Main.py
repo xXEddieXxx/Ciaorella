@@ -24,6 +24,69 @@ def save_to_json(entry):
     data.append(entry)
     save_data(data)
 
+class DateModalExtend(discord.ui.Modal, title="Abwesenheit verlängern (Datum eingeben)"):
+    date = discord.ui.TextInput(
+        label="Neues Datum",
+        placeholder="Gib das neue Datum ein (DD.MM.YYYY)",
+        required=True,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        date_pattern = (
+            r"^(?:(?:31\.(?:0[13578]|1[02])\.\d{4})|"
+            r"(?:29|30\.(?:0[1,3-9]|1[0-2])\.\d{4})|"
+            r"(?:0[1-9]|1\d|2[0-8])\.(?:0[1-9]|1[0-2])\.\d{4}|"
+            r"(?:29\.02\.(?:(?:[02468][048]00)|(?:[13579][26]00)|(?:\d{2}[048])|(?:\d{2}[13579][26]))))$"
+        )
+
+        if not re.match(date_pattern, self.date.value):
+            await interaction.response.send_message(
+                "❌ Ungültiges Datum! Bitte geben Sie ein gültiges Datum im Format `DD.MM.YYYY` ein.",
+                ephemeral=True,
+            )
+            return
+
+        try:
+            valid_date = datetime.strptime(self.date.value, "%d.%m.%Y")
+        except ValueError:
+            await interaction.response.send_message(
+                "❌ Ungültiges Datum. Bitte prüfen Sie Ihre Eingabe.",
+                ephemeral=True,
+            )
+            return
+
+        data = load_data()
+        user_id = interaction.user.id
+
+        # Find user entry and update date
+        found = False
+        for entry in data:
+            if entry.get("user_id") == user_id:
+                entry["date"] = valid_date.strftime("%d.%m.%Y")
+                entry["notified"] = False  # reset notified flag for new date
+                found = True
+                break
+
+        if not found:
+            await interaction.response.send_message(
+                "ℹ️ Du hast keine bestehende Abwesenheit. Bitte trage zuerst ein Datum ein.",
+                ephemeral=True,
+            )
+            return
+
+        save_data(data)
+
+        await interaction.response.send_message(
+            f"✅ Deine Abwesenheit wurde auf den **{valid_date.strftime('%d.%m.%Y')}** verlängert.",
+            ephemeral=True,
+        )
+
+class ExtendAbsenceView(discord.ui.View):
+    @discord.ui.button(label="Abwesenheit verlängern", style=discord.ButtonStyle.secondary)
+    async def extend_absence(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = DateModalExtend()
+        await interaction.response.send_modal(modal)
+
 class DateModal(discord.ui.Modal, title="Enter a Date (German Format)"):
     date = discord.ui.TextInput(
         label="Date",
@@ -188,7 +251,8 @@ async def check_dates():
             user = bot.get_user(entry["user_id"])
             if user:
                 try:
-                    await user.send(f"📅 Hallo {entry['username']}, dein eingetragenes Datum **{entry['date']}** ist heute erreicht!")
+                    await user.send(f"📅 Hallo {entry['username']}, dein eingetragenes Datum **{entry['date']}** ist heute erreicht!"
+                    ,view=ExtendAbsenceView())
                     entry["notified"] = True
                     changed = True
                 except Exception as e:
