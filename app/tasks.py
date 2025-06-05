@@ -19,10 +19,42 @@ def register_tasks(bot):
 
         for entry in data:
             user_id = entry.get("user_id")
+            username = entry.get("username", "Unbekannt")
             user_date = entry.get("date")
             notified = entry.get("notified")
 
-            if not notified and user_date == today_str:
+            for guild in bot.guilds:
+                config = get_guild_config(guild.id)
+                role_name = config.get("role_name", DEFAULT_ROLE_NAME)
+                role = get_role(guild, role_name)
+                member = await get_member(guild, user_id)
+
+                if not member:
+                    continue
+                if role and role not in member.roles:
+                    logger.info(f"Benutzer {username} hat Rolle '{role_name}' nicht mehr – Eintrag wird entfernt.")
+                    try:
+                        await member.send(
+                            f"## ✅ Abwesenheit beendet\n"
+                            f"Die Rolle **{role.name}** wurde manuell entfernt.\n"
+                            f"Dein Abwesenheitsstatus wurde daher automatisch beendet."
+                        )
+                    except Exception as e:
+                        logger.warning(f"Fehler beim Senden der automatischen Abmeldung an {username}: {e}")
+                    log_channel_id = config.get("logging_channel_id")
+                    if log_channel_id:
+                        log_channel = guild.get_channel(log_channel_id)
+                        if log_channel:
+                            await log_channel.send(
+                                f"✅ {member.mention} hat die Abwesenheitsrolle nicht mehr. "
+                                f"Eintrag wurde von einem Admin entfernt."
+                            )
+
+                    entry["remove"] = True
+                    changed = True
+                    break
+
+            if not entry.get("remove") and not notified and user_date == today_str:
                 user = bot.get_user(user_id)
                 if user:
                     try:
@@ -36,16 +68,17 @@ def register_tasks(bot):
                         changed = True
                         logger.info(f"Notified user {user_id} of return date {user_date}.")
                     except Exception as e:
-                        logger.error(f"Error notifying user {entry['username']}: {e}", exc_info=True)
-            elif user_date <= yesterday:
+                        logger.error(f"Error notifying user {username}: {e}", exc_info=True)
+
+            if not entry.get("remove") and user_date <= yesterday:
                 for guild in bot.guilds:
                     member = await get_member(guild, user_id)
                     if member:
                         config = get_guild_config(guild.id)
                         role_name = config.get("role_name", DEFAULT_ROLE_NAME)
                         role = get_role(guild, role_name)
-                        if role and await modify_role(member, role, add=False):
-                            logger.info(f"Rolle '{role_name}' entfernt für {entry['username']}.")
+                        if role and role in member.roles and await modify_role(member, role, add=False):
+                            logger.info(f"Rolle '{role_name}' entfernt für {username}.")
                             try:
                                 await member.send(
                                     f"## ✅ Abwesenheit beendet\n"
@@ -53,15 +86,13 @@ def register_tasks(bot):
                                     f"Die Rolle '{role_name}' wurde automatisch entfernt."
                                 )
                             except Exception as e:
-                                logger.error(f"Fehler bei Benachrichtigung: {entry['username']}: {e}", exc_info=True)
-                entry["remove"] = True
+                                logger.error(f"Fehler bei Benachrichtigung: {username}: {e}", exc_info=True)
+                            entry["remove"] = True
+                            changed = True
 
         new_data = [entry for entry in data if not entry.get("remove")]
-        if len(new_data) != len(data):
-            changed = True
-
         if changed:
             save_data(new_data)
-            logger.info("Absence data updated after role removals.")
+            logger.info("Absence data updated after role removals or corrections.")
 
     bot.check_dates_loop = check_dates

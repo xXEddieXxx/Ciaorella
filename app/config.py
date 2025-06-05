@@ -94,7 +94,12 @@ def validate_date(date_str):
         logger.warning(f"Date validation failed for input: {date_str}")
         return None
     try:
-        return datetime.strptime(date_str, "%d.%m.%Y")
+        parsed_date = datetime.strptime(date_str, "%d.%m.%Y")
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        if parsed_date < today:
+            logger.warning(f"Rejected past date: {date_str}")
+            return None
+        return parsed_date
     except ValueError:
         logger.error(f"ValueError in date validation: {date_str}")
         return None
