@@ -38,7 +38,7 @@ def register_events(bot):
             color=0x890024,
         )
         embed.set_footer(text="Verwende die Buttons unten um deine Abwesenheit zu verwalten")
-        embed.set_thumbnail(url="https://i.imgur.com/7F7VlEg.png")
+        embed.set_thumbnail(url="https://pbs.twimg.com/media/DtFE2_BX4AECJ8a.jpg:large")
 
         for guild in bot.guilds:
             config = get_guild_config(guild.id)
