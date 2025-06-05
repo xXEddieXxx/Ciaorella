@@ -1,0 +1,67 @@
+from discord.ext import tasks
+from config import (
+    load_data, save_data, get_guild_config,
+    get_member, get_role, modify_role, DEFAULT_ROLE_NAME
+)
+from logger import logger
+from absence import ExtendAbsenceView
+from datetime import datetime, timedelta
+
+def register_tasks(bot):
+    @tasks.loop(minutes=1)
+    async def check_dates():
+        logger.info("Running absence check task...")
+        data = load_data()
+        today = datetime.now()
+        today_str = today.strftime("%d.%m.%Y")
+        yesterday = (today - timedelta(days=1)).strftime("%d.%m.%Y")
+        changed = False
+
+        for entry in data:
+            user_id = entry.get("user_id")
+            user_date = entry.get("date")
+            notified = entry.get("notified")
+
+            if not notified and user_date == today_str:
+                user = bot.get_user(user_id)
+                if user:
+                    try:
+                        await user.send(
+                            f"## ⏰ Rückkehrtag erreicht\n"
+                            f"Deine eingetragene Abwesenheit endet heute am **{user_date}**!\n\n"
+                            f"Möchtest du deine Abwesenheit verlängern?",
+                            view=ExtendAbsenceView()
+                        )
+                        entry["notified"] = True
+                        changed = True
+                        logger.info(f"Notified user {user_id} of return date {user_date}.")
+                    except Exception as e:
+                        logger.error(f"Error notifying user {entry['username']}: {e}", exc_info=True)
+            elif user_date <= yesterday:
+                for guild in bot.guilds:
+                    member = await get_member(guild, user_id)
+                    if member:
+                        config = get_guild_config(guild.id)
+                        role_name = config.get("role_name", DEFAULT_ROLE_NAME)
+                        role = get_role(guild, role_name)
+                        if role and await modify_role(member, role, add=False):
+                            logger.info(f"Rolle '{role_name}' entfernt für {entry['username']}.")
+                            try:
+                                await member.send(
+                                    f"## ✅ Abwesenheit beendet\n"
+                                    f"Deine Abwesenheitsperiode ist abgelaufen.\n"
+                                    f"Die Rolle '{role_name}' wurde automatisch entfernt."
+                                )
+                            except Exception as e:
+                                logger.error(f"Fehler bei Benachrichtigung: {entry['username']}: {e}", exc_info=True)
+                entry["remove"] = True
+
+        new_data = [entry for entry in data if not entry.get("remove")]
+        if len(new_data) != len(data):
+            changed = True
+
+        if changed:
+            save_data(new_data)
+            logger.info("Absence data updated after role removals.")
+
+    bot.check_dates_loop = check_dates
