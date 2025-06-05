@@ -6,7 +6,12 @@ from tasks import register_tasks
 from events import register_events
 from logger import logger
 
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+intents = discord.Intents.default()
+intents.guilds = True
+intents.members = True
+intents.messages = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 register_admin_commands(bot)
 register_tasks(bot)
