@@ -1,14 +1,14 @@
 import random
-
+from datetime import datetime, timedelta
 import discord
 from discord.ext import tasks
+
 from config import (
     load_data, save_data, get_guild_config,
     get_member, get_role, modify_role, DEFAULT_ROLE_NAME
 )
 from logger import logger
 from absence import ExtendAbsenceView
-from datetime import datetime, timedelta
 
 def register_tasks(bot):
     @tasks.loop(minutes=1)
@@ -17,7 +17,7 @@ def register_tasks(bot):
         data = load_data()
         today = datetime.now()
         today_str = today.strftime("%d.%m.%Y")
-        yesterday = (today - timedelta(days=1)).strftime("%d.%m.%Y")
+        yesterday_str = (today - timedelta(days=1)).strftime("%d.%m.%Y")
         changed = False
 
         for entry in data:
@@ -25,39 +25,43 @@ def register_tasks(bot):
             username = entry.get("username", "Unbekannt")
             user_date = entry.get("date")
             notified = entry.get("notified")
+            guild_id = entry.get("guild_id")
 
-            for guild in bot.guilds:
-                config = get_guild_config(guild.id)
-                role_name = config.get("role_name", DEFAULT_ROLE_NAME)
-                role = get_role(guild, role_name)
-                member = await get_member(guild, user_id)
+            guild = bot.get_guild(guild_id)
+            if not guild:
+                continue
 
-                if not member:
-                    continue
-                if role and role not in member.roles:
-                    logger.info(f"Benutzer {username} hat Rolle '{role_name}' nicht mehr – Eintrag wird entfernt.")
-                    try:
-                        await member.send(
-                            f"## ✅ Abwesenheit beendet\n"
-                            f"Die Rolle **{role.name}** wurde manuell entfernt.\n"
-                            f"Dein Abwesenheitsstatus wurde daher automatisch beendet."
+            config = get_guild_config(guild.id)
+            role_name = config.get("role_name", DEFAULT_ROLE_NAME)
+            role = get_role(guild, role_name)
+            member = await get_member(guild, user_id)
+
+            if not member:
+                continue
+
+            if role and role not in member.roles:
+                logger.info(f"Benutzer {username} hat Rolle '{role_name}' nicht mehr – Eintrag wird entfernt.")
+                try:
+                    await member.send(
+                        f"## ✅ Abwesenheit beendet\n"
+                        f"Die Rolle **{role.name}** wurde manuell entfernt.\n"
+                        f"Dein Abwesenheitsstatus wurde daher automatisch beendet."
+                    )
+                except Exception as e:
+                    logger.warning(f"Fehler beim Senden der automatischen Abmeldung an {username}: {e}")
+                log_channel_id = config.get("logging_channel_id")
+                if log_channel_id:
+                    log_channel = guild.get_channel(log_channel_id)
+                    if log_channel:
+                        await log_channel.send(
+                            f"✅ {member.mention} hat die Abwesenheitsrolle nicht mehr. "
+                            f"Eintrag wurde von einem Admin entfernt."
                         )
-                    except Exception as e:
-                        logger.warning(f"Fehler beim Senden der automatischen Abmeldung an {username}: {e}")
-                    log_channel_id = config.get("logging_channel_id")
-                    if log_channel_id:
-                        log_channel = guild.get_channel(log_channel_id)
-                        if log_channel:
-                            await log_channel.send(
-                                f"✅ {member.mention} hat die Abwesenheitsrolle nicht mehr. "
-                                f"Eintrag wurde von einem Admin entfernt."
-                            )
+                entry["remove"] = True
+                changed = True
+                continue
 
-                    entry["remove"] = True
-                    changed = True
-                    break
-
-            if not entry.get("remove") and not notified and user_date == today_str:
+            if not notified and user_date == today_str:
                 user = bot.get_user(user_id)
                 if user:
                     try:
@@ -73,25 +77,19 @@ def register_tasks(bot):
                     except Exception as e:
                         logger.error(f"Error notifying user {username}: {e}", exc_info=True)
 
-            if not entry.get("remove") and user_date <= yesterday:
-                for guild in bot.guilds:
-                    member = await get_member(guild, user_id)
-                    if member:
-                        config = get_guild_config(guild.id)
-                        role_name = config.get("role_name", DEFAULT_ROLE_NAME)
-                        role = get_role(guild, role_name)
-                        if role and role in member.roles and await modify_role(member, role, add=False):
-                            logger.info(f"Rolle '{role_name}' entfernt für {username}.")
-                            try:
-                                await member.send(
-                                    f"## ✅ Abwesenheit beendet\n"
-                                    f"Deine Abwesenheitsperiode ist abgelaufen.\n"
-                                    f"Die Rolle '{role_name}' wurde automatisch entfernt."
-                                )
-                            except Exception as e:
-                                logger.error(f"Fehler bei Benachrichtigung: {username}: {e}", exc_info=True)
-                            entry["remove"] = True
-                            changed = True
+            if user_date <= yesterday_str:
+                if role and role in member.roles and await modify_role(member, role, add=False):
+                    logger.info(f"Rolle '{role_name}' entfernt für {username}.")
+                    try:
+                        await member.send(
+                            f"## ✅ Abwesenheit beendet\n"
+                            f"Deine Abwesenheitsperiode ist abgelaufen.\n"
+                            f"Die Rolle '{role_name}' wurde automatisch entfernt."
+                        )
+                    except Exception as e:
+                        logger.error(f"Fehler bei Benachrichtigung: {username}: {e}", exc_info=True)
+                    entry["remove"] = True
+                    changed = True
 
         new_data = [entry for entry in data if not entry.get("remove")]
         if changed:

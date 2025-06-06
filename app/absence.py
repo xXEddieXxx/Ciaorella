@@ -6,13 +6,21 @@ from config import (
 )
 from logger import logger
 
-async def log_absence_event(interaction: discord.Interaction, message: str):
-    config = get_guild_config(interaction.guild.id)
+async def log_absence_event_by_guild(client: discord.Client, guild_id: int, message: str):
+    guild = client.get_guild(guild_id)
+    if not guild:
+        return
+
+    config = get_guild_config(guild_id)
     log_channel_id = config.get("logging_channel_id")
-    if log_channel_id:
-        log_channel = interaction.guild.get_channel(log_channel_id)
-        if log_channel:
-            await log_channel.send(message)
+    if not log_channel_id:
+        return
+
+    log_channel = guild.get_channel(log_channel_id)
+    if not log_channel:
+        return
+    await log_channel.send(message)
+
 async def assign_absence_role(interaction, add=True):
     guild = interaction.guild
     config = get_guild_config(guild.id)
@@ -63,8 +71,10 @@ class DateModalExtend(discord.ui.Modal, title="Abwesenheit verlängern"):
                 logger.info(f"User {interaction.user} successfully extended absence to {valid_date.strftime('%d.%m.%Y')}")
                 await interaction.response.send_message(
                     f"✅ **Abwesenheit verlängert!**\nNeues Rückkehrdatum: **{valid_date.strftime('%d.%m.%Y')}**.", ephemeral=True)
-                await log_absence_event(
-                    interaction,
+                guild_id = entry.get("guild_id") or interaction.guild.id
+                await log_absence_event_by_guild(
+                    interaction.client,
+                    guild_id,
                     f"🕒 {interaction.user.mention} hat seine Abwesenheit verlängert bis **{valid_date.strftime('%d.%m.%Y')}**."
                 )
                 return
@@ -90,8 +100,10 @@ async def _extend_absence(interaction: discord.Interaction, weeks: int):
             logger.info(f"User {interaction.user} extended absence by {weeks} weeks to {extended_date.strftime('%d.%m.%Y')}")
             await interaction.response.send_message(
                 f"✅ **Abwesenheit verlängert!**\nNeues Rückkehrdatum: **{extended_date.strftime('%d.%m.%Y')}**.", ephemeral=True)
-            await log_absence_event(
-                interaction,
+            guild_id = entry.get("guild_id") or interaction.guild.id
+            await log_absence_event_by_guild(
+                interaction.client,
+                guild_id,
                 f"🕒 {interaction.user.mention} hat seine Abwesenheit um {weeks*7} Tage verlängert bis **{extended_date.strftime('%d.%m.%Y')}**."
             )
             return
@@ -111,7 +123,7 @@ class ExtendAbsenceView(discord.ui.View):
     async def set_4weeks(self, interaction: discord.Interaction, button: discord.ui.Button):
         await _extend_absence(interaction, weeks=4)
 
-    @discord.ui.button(label="Individuelles Datum", style=discord.ButtonStyle.secondary, emoji="📅", custom_id="extend_custom")
+    @discord.ui.button(label="Individuelles Datum", style=discord.ButtonStyle.secondary, emoji="🗓️", custom_id="extend_custom")
     async def extend_absence(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(DateModalExtend())
 
@@ -129,24 +141,26 @@ class DateModal(discord.ui.Modal, title="Abwesenheit eintragen"):
             await respond_invalid_date(interaction)
             return
         date_str = valid_date.strftime("%d.%m.%Y")
-        add_or_update_entry(interaction.user.id, str(interaction.user), date_str)
+        add_or_update_entry(interaction.user.id, str(interaction.user), date_str, interaction.guild.id)
         if not await assign_absence_role(interaction, add=True):
             return
         await respond_absence_set(interaction, date_str)
-        await log_absence_event(
-            interaction,
+        await log_absence_event_by_guild(
+            interaction.client,
+            interaction.guild.id,
             f"📋 {interaction.user.mention} hat sich als abwesend eingetragen bis **{date_str}**."
         )
 
 async def _set_absence(interaction: discord.Interaction, days: int):
     target_date = (datetime.now() + timedelta(days=days)).strftime("%d.%m.%Y")
     logger.info(f"User {interaction.user} sets absence for {days} days (until {target_date})")
-    add_or_update_entry(interaction.user.id, str(interaction.user), target_date)
+    add_or_update_entry(interaction.user.id, str(interaction.user), target_date, interaction.guild.id)
     if not await assign_absence_role(interaction, add=True):
         return
     await respond_absence_set(interaction, target_date)
-    await log_absence_event(
-        interaction,
+    await log_absence_event_by_guild(
+        interaction.client,
+        interaction.guild.id,
         f"📋 {interaction.user.mention} hat sich als abwesend eingetragen bis **{target_date}**."
     )
 
@@ -162,14 +176,14 @@ class AbwesenheitView(discord.ui.View):
     async def set_4weeks(self, interaction: discord.Interaction, button: discord.ui.Button):
         await _set_absence(interaction, days=28)
 
-    @discord.ui.button(label="Individuelles Datum", style=discord.ButtonStyle.secondary, emoji="📅", row=1, custom_id="absence_custom")
+    @discord.ui.button(label="Individuelles Datum", style=discord.ButtonStyle.secondary, emoji="🗓️", row=1, custom_id="absence_custom")
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(DateModal())
 
     @discord.ui.button(label="Abwesenheit beenden", style=discord.ButtonStyle.danger, emoji="✅", row=1,
                        custom_id="absence_end")
     async def end_absence(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not remove_entry(interaction.user.id):
+        if not remove_entry(interaction.user.id, interaction.guild.id):
             logger.warning(f"User {interaction.user} tried to end non-existing absence.")
             await interaction.response.send_message(
                 "Keine aktive Abwesenheit.", ephemeral=True)
@@ -178,7 +192,8 @@ class AbwesenheitView(discord.ui.View):
             return
         logger.info(f"User {interaction.user} ended absence and role was removed.")
         await respond_absence_end(interaction)
-        await log_absence_event(
-            interaction,
+        await log_absence_event_by_guild(
+            interaction.client,
+            interaction.guild.id,
             f"✅ {interaction.user.mention} hat die Abwesenheit beendet."
         )
