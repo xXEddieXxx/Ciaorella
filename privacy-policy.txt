@@ -29,6 +29,8 @@ For each Discord server where the bot is installed:
 
     logging_channel_id – the channel where logs are sent
 
+    language - language the server wants the bot to use
+
 2. How We Use This Data
 
     User data is used solely to manage absence statuses, reminders, and role assignments.
