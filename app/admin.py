@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands, Embed
-from app.logger import logger
+from logger import logger
 from config import update_guild_config, get_guild_config, DEFAULT_ROLE_NAME
 
 def register_admin_commands(bot):

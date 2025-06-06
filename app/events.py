@@ -1,8 +1,8 @@
 import discord
 
-from app.absence import AbwesenheitView
-from app.config import ensure_single_embed, get_guild_config
-from app.logger import logger
+from absence import AbwesenheitView
+from config import ensure_single_embed, get_guild_config
+from logger import logger
 
 
 def register_events(bot):
