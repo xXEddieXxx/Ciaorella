@@ -67,24 +67,30 @@ def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-def add_or_update_entry(user_id, username, date_str):
-    logger.info(f"Adding/updating absence entry for {username} ({user_id}) to {date_str}")
+def add_or_update_entry(user_id, username, date_str, guild_id):
+    logger.info(f"Adding/updating absence entry for {username} ({user_id}) to {date_str} (guild: {guild_id})")
     data = load_data()
     for entry in data:
-        if entry.get("user_id") == user_id:
+        if entry.get("user_id") == user_id and entry.get("guild_id") == guild_id:
             entry["date"] = date_str
             entry["notified"] = False
             break
     else:
-        data.append({"user_id": user_id, "username": username, "date": date_str, "notified": False})
+        data.append({
+            "user_id": user_id,
+            "username": username,
+            "date": date_str,
+            "notified": False,
+            "guild_id": guild_id
+        })
     save_data(data)
 
-def remove_entry(user_id):
-    logger.info(f"Removing absence entry for user {user_id}")
+def remove_entry(user_id, guild_id):
+    logger.info(f"Removing absence entry for user {user_id} in guild {guild_id}")
     data = load_data()
-    new_data = [e for e in data if e.get("user_id") != user_id]
+    new_data = [e for e in data if not (e.get("user_id") == user_id and e.get("guild_id") == guild_id)]
     if len(new_data) == len(data):
-        logger.warning(f"No entry found for user {user_id} to remove.")
+        logger.warning(f"No entry found for user {user_id} in guild {guild_id} to remove.")
         return False
     save_data(new_data)
     return True

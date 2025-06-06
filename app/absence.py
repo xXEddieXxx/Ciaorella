@@ -13,7 +13,6 @@ async def log_absence_event(interaction: discord.Interaction, message: str):
         log_channel = interaction.guild.get_channel(log_channel_id)
         if log_channel:
             await log_channel.send(message)
-
 async def assign_absence_role(interaction, add=True):
     guild = interaction.guild
     config = get_guild_config(guild.id)
