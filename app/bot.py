@@ -1,5 +1,4 @@
 import os
-import discord
 from discord.ext import commands
 
 from admin import register_admin_commands
