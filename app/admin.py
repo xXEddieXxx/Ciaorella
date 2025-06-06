@@ -126,6 +126,8 @@ def register_admin_commands(bot):
         embed.set_footer(text="Verwende /set_channel, /set_role und /set_logging_channel zum Ändern.")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+      #not Implemented YET
+"""
     @bot.tree.command(
         name="set_language",
         description="Erlaubt das Ändern der Sprache, die der Bot verwendet."
@@ -145,3 +147,4 @@ def register_admin_commands(bot):
             f"🌐 **Sprache gesetzt!**\nDer Bot verwendet jetzt **{readable}**.",
             ephemeral=True
         )
+"""
