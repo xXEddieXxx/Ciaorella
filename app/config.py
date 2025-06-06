@@ -143,3 +143,23 @@ async def modify_role(member, role, add=True):
 
 def is_admin_or_owner(ctx):
     return ctx.author == ctx.guild.owner or ctx.author.guild_permissions.administrator
+
+async def ensure_single_embed(channel, bot, embed, view):
+  def is_absence_embed(message):
+    return (
+      message.author == bot.user and
+      message.embeds and
+      message.embeds[0].title == "📅 Abwesenheitsmanager"
+    )
+
+  messages = [m async for m in channel.history(limit=50)]
+  bot_embeds = [m for m in messages if is_absence_embed(m)]
+
+  if len(bot_embeds) == 1:
+    return
+  elif len(bot_embeds) == 0:
+    await channel.send(embed=embed, view=view)
+  else:
+    for msg in bot_embeds:
+      await msg.delete()
+    await channel.send(embed=embed, view=view)
