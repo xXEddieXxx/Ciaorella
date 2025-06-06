@@ -23,6 +23,10 @@ def register_events(bot):
             bot.check_dates_loop.start()
             logger.info("Started absence check background task.")
 
+        if hasattr(bot, "change_status_loop") and not bot.change_status_loop.is_running():
+            bot.change_status_loop.start()
+            logger.info("Started status rotation task.")
+
         import discord
         embed = discord.Embed(
             title="📅 Abwesenheitsmanager",
