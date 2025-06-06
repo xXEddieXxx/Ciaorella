@@ -23,22 +23,15 @@ def register_admin_commands(bot):
 
         await interaction.response.defer(ephemeral=True)
 
-        old_channel = interaction.guild.get_channel(old_channel_id) if old_channel_id else None
-
-        if old_channel and old_channel != channel:
-            try:
-                def is_our_bot_message(m):
-                    return m.author == interaction.client.user
-
-                deleted = await old_channel.purge(limit=100, check=is_our_bot_message)
-                logger.info(f"Deleted {len(deleted)} old messages in #{old_channel.name}")
-            except Exception as e:
-                logger.warning(f"Konnte alte Nachrichten in #{old_channel.name} nicht löschen: {e}")
+        if old_channel_id:
+            old_channel = interaction.guild.get_channel(old_channel_id)
+            if old_channel and old_channel != channel:
+                await _delete_absence_embeds(old_channel, bot=interaction.client)
 
         update_guild_config(guild_id, channel_id=channel.id)
 
         from absence import AbwesenheitView
-        embed = discord.Embed(
+        embed = Embed(
             title="📅 Abwesenheitsmanager",
             description=(
                 "### Verwalte deine Abwesenheit im Server\n\n"
@@ -68,83 +61,20 @@ def register_admin_commands(bot):
             ephemeral=True
         )
 
-    @bot.tree.command(
-        name="set_role",
-        description="Setzt die Rolle für abwesende Mitglieder."
-    )
-    @app_commands.checks.has_permissions(administrator=True)
-    async def set_role(interaction: discord.Interaction, role: discord.Role):
-        update_guild_config(interaction.guild.id, role_name=role.name)
-        await interaction.response.send_message(
-            f"✅ **Rolle gesetzt!**\nAbwesenheitsrolle wurde auf `{role.name}` aktualisiert.",
-            ephemeral=True
-        )
-
-    @bot.tree.command(
-        name="set_logging_channel",
-        description="Setzt den Kanal für Abwesenheits-Logs."
-    )
-    @app_commands.checks.has_permissions(administrator=True)
-    async def set_logging_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-        update_guild_config(interaction.guild.id, logging_channel_id=channel.id)
-        await interaction.response.send_message(
-            f"✅ **Logging-Kanal gesetzt!**\nAlle Abwesenheitsereignisse werden jetzt in {channel.mention} geloggt.",
-            ephemeral=True
-        )
-
-    @bot.tree.command(
-        name="show_config",
-        description="Zeigt die aktuelle Bot-Konfiguration für diesen Server."
-    )
-    @app_commands.checks.has_permissions(administrator=True)
-    async def show_config(interaction: discord.Interaction):
-        config = get_guild_config(interaction.guild.id)
-        channel = interaction.guild.get_channel(config.get("channel_id"))
-        log_channel = interaction.guild.get_channel(config.get("logging_channel_id")) if config.get(
-            "logging_channel_id") else None
-        role_name = config.get("role_name", DEFAULT_ROLE_NAME)
-        embed = discord.Embed(
-            title="⚙️ Bot-Konfiguration",
-            color=0x3498db,
-            description=f"**Aktuelle Einstellungen für diesen Server**"
-        )
-        embed.add_field(
-            name="Kanal für Nachrichten",
-            value=channel.mention if channel else "Nicht gesetzt",
-            inline=False
-        )
-        embed.add_field(
-            name="Abwesenheitsrolle",
-            value=role_name,
-            inline=False
-        )
-        embed.add_field(
-            name="Logging-Kanal",
-            value=log_channel.mention if log_channel else "Nicht gesetzt",
-            inline=False
-        )
-        embed.set_footer(text="Verwende /set_channel, /set_role und /set_logging_channel zum Ändern.")
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-      #not Implemented YET
-"""
-    @bot.tree.command(
-        name="set_language",
-        description="Erlaubt das Ändern der Sprache, die der Bot verwendet."
-    )
-    @app_commands.checks.has_permissions(administrator=True)
-    async def set_language(interaction: discord.Interaction, language: str):
-        if language not in ["de", "en"]:
-            await interaction.response.send_message(
-                "⚠️ Ungültige Sprache! Bitte wähle entweder `de` oder `en`.",
-                ephemeral=True
+    async def _delete_absence_embeds(channel: discord.TextChannel, bot: discord.Client):
+        def is_absence_embed(message: discord.Message):
+            return (
+                message.author == bot.user
+                and message.embeds
+                and message.embeds[0].title == "📅 Abwesenheitsmanager"
             )
-            return
 
-        update_guild_config(interaction.guild.id, language=language)
-        readable = "Deutsch" if language == "de" else "Englisch"
-        await interaction.response.send_message(
-            f"🌐 **Sprache gesetzt!**\nDer Bot verwendet jetzt **{readable}**.",
-            ephemeral=True
-        )
-"""
+        try:
+            async for msg in channel.history(limit=500):
+                if is_absence_embed(msg):
+                    await msg.delete()
+                    logger.info(f"Gelöschtes Embed in #{channel.name} (Msg ID: {msg.id})")
+        except discord.Forbidden:
+            logger.warning(f"Keine Lösch‐Berechtigung in #{channel.name}, Abwesenheits‐Embed konnte nicht entfernt werden.")
+        except discord.NotFound:
+            logger.warning(f"Kanal #{channel.name} nicht gefunden beim Löschen des Embeds.")
