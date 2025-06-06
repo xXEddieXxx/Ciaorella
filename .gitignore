@@ -4,5 +4,6 @@
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/vcs.xml
 /.idea
-/.env
 /app/token.txt
+/app/config/dates.json
+/app/config/guild_config.json
