@@ -120,6 +120,8 @@ A modern Discord bot for **absence management** – featuring role automation, l
 - **No logging?**  
   Set `/set_logging_channel` and confirm bot has write access.
 
+
+<a href="https://www.buymeacoffee.com/xEddie" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 =======================================
 
 
@@ -244,3 +246,5 @@ Ein moderner Discord-Bot zur **Abwesenheitsverwaltung** für Server – mit Roll
   Nutze `/set_channel` und prüfe die Channel-Rechte.
 - **Kein Logging?**  
   Setze `/set_logging_channel` und stelle sicher, dass der Bot dort schreiben kann.
+
+<a href="https://www.buymeacoffee.com/xEddie" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
