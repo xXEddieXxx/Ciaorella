@@ -36,9 +36,10 @@ def get_guild_config(guild_id):
     config = load_config()
     return config.get(str(guild_id), {
         "channel_id": None,
-        "role_name": DEFAULT_ROLE_NAME
+        "role_name": DEFAULT_ROLE_NAME,
+        "logging_channel_id": None,
+        "language": "de"
     })
-
 def update_guild_config(guild_id, **kwargs):
     config = load_config()
     guild_id = str(guild_id)

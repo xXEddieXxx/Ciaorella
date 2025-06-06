@@ -1,5 +1,6 @@
 import discord
-from discord import app_commands
+from discord import app_commands, Embed
+from app.logger import logger
 from config import update_guild_config, get_guild_config, DEFAULT_ROLE_NAME
 
 def register_admin_commands(bot):
@@ -9,9 +10,61 @@ def register_admin_commands(bot):
     )
     @app_commands.checks.has_permissions(administrator=True)
     async def set_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-        update_guild_config(interaction.guild.id, channel_id=channel.id)
-        await interaction.response.send_message(
-            f"✅ **Kanal gesetzt!**\nAbwesenheitsnachrichten werden jetzt in {channel.mention} angezeigt.",
+        guild_id = interaction.guild.id
+        config = get_guild_config(guild_id)
+        old_channel_id = config.get("channel_id")
+
+        if old_channel_id == channel.id:
+            await interaction.response.send_message(
+                f"⚠️ Der Kanal {channel.mention} ist bereits als Abwesenheitskanal gesetzt.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        old_channel = interaction.guild.get_channel(old_channel_id) if old_channel_id else None
+
+        if old_channel and old_channel != channel:
+            try:
+                def is_our_bot_message(m):
+                    return m.author == interaction.client.user
+
+                deleted = await old_channel.purge(limit=100, check=is_our_bot_message)
+                logger.info(f"Deleted {len(deleted)} old messages in #{old_channel.name}")
+            except Exception as e:
+                logger.warning(f"Konnte alte Nachrichten in #{old_channel.name} nicht löschen: {e}")
+
+        update_guild_config(guild_id, channel_id=channel.id)
+
+        from absence import AbwesenheitView
+        embed = discord.Embed(
+            title="📅 Abwesenheitsmanager",
+            description=(
+                "### Verwalte deine Abwesenheit im Server\n\n"
+                "▫️ Abwesenheit für 2 oder 4 Wochen eintragen\n"
+                "▫️ Individuelle Rückkehrdaten festlegen\n"
+                "▫️ Automatische Benachrichtigungen erhalten\n"
+                "▫️ Deine Abwesenheit jederzeit beenden\n\n"
+                "**Du erhältst die Abwesenheitsrolle, solange du als abwesend markiert bist.**"
+            ),
+            color=0x890024,
+        )
+        embed.set_footer(text="Verwende die Buttons unten um deine Abwesenheit zu verwalten")
+        embed.set_thumbnail(url="https://pbs.twimg.com/media/DtFE2_BX4AECJ8a.jpg:large")
+
+        try:
+            await channel.send(embed=embed, view=AbwesenheitView())
+        except Exception as e:
+            logger.error(f"Fehler beim Senden in neuen Kanal #{channel.name}: {e}", exc_info=True)
+            await interaction.followup.send(
+                f"❌ Fehler beim Senden der Nachricht in {channel.mention}. Bitte prüfe die Berechtigungen.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.followup.send(
+            f"✅ **Kanal aktualisiert!**\nDie Abwesenheitsnachricht wurde nach {channel.mention} verschoben.",
             ephemeral=True
         )
 
@@ -72,3 +125,23 @@ def register_admin_commands(bot):
         )
         embed.set_footer(text="Verwende /set_channel, /set_role und /set_logging_channel zum Ändern.")
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @bot.tree.command(
+        name="set_language",
+        description="Erlaubt das Ändern der Sprache, die der Bot verwendet."
+    )
+    @app_commands.checks.has_permissions(administrator=True)
+    async def set_language(interaction: discord.Interaction, language: str):
+        if language not in ["de", "en"]:
+            await interaction.response.send_message(
+                "⚠️ Ungültige Sprache! Bitte wähle entweder `de` oder `en`.",
+                ephemeral=True
+            )
+            return
+
+        update_guild_config(interaction.guild.id, language=language)
+        readable = "Deutsch" if language == "de" else "Englisch"
+        await interaction.response.send_message(
+            f"🌐 **Sprache gesetzt!**\nDer Bot verwendet jetzt **{readable}**.",
+            ephemeral=True
+        )
