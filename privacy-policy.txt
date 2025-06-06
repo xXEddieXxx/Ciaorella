@@ -1,0 +1,68 @@
+Privacy Policy for Ciaorella
+Last Updated: [2025-06-06]
+
+This privacy policy outlines how our Discord bot (the “Bot”) collects, uses, and stores data within Discord servers.
+1. What Data We Collect
+User Data
+
+We collect the following per user:
+
+    user_id – your unique Discord user ID
+
+    username – your display name at the time of recording
+
+    date – the end date of your absence
+
+    notified – whether you have been reminded about your return
+
+    guild_id – the ID of the server where this data is associated
+
+data is only stored with explicit user interaction.
+
+Guild (Server) Data
+
+For each Discord server where the bot is installed:
+
+    channel_id – configured channel for absence interaction (if any)
+
+    role_name – the name of the role assigned during absence
+
+    logging_channel_id – the channel where logs are sent
+
+2. How We Use This Data
+
+    User data is used solely to manage absence statuses, reminders, and role assignments.
+
+    Guild data is used to configure how the bot behaves in each server (e.g., where to log events or which role to assign).
+
+We do not:
+
+    Collect message content
+
+    Track user activity beyond absence entries
+
+    Share data with third parties
+
+3. Data Storage and Retention
+
+All data is stored securely on our servers or locally in the bot’s persistent configuration. We only retain data as long as necessary to provide bot functionality. Entries are deleted when:
+
+    A user's absence ends
+
+    A user removes the role manually
+
+    A server removes the bot
+
+4. Data Access and Deletion
+
+Server administrators can request a full deletion of server-related data by removing the bot and contacting the bot developer.
+
+Users can request deletion of their personal data by contacting the bot owner (e.g., via DM).
+
+5. Compliance with Discord Policies
+
+Our bot complies with Discord's Developer Terms of Service and Developer Policy. All stored data is non-sensitive, used for functionality explicitly enabled by server administrators, and not shared or monetized.
+
+6. Contact
+
+For any privacy-related questions or data deletion requests, contact the bot owner via Discord: eddie2021
