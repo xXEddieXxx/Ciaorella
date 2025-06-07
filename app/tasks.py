@@ -72,7 +72,6 @@ def register_tasks(bot):
     if changed:
       save_data([e for e in data if not e.get("remove")])
       logger.info("Absence data updated after role removals or notifications.")
-    bot.check_dates_loop = check_dates
 
   statuses = [
       "Zählt die Panzer, die du verloren hast…",
@@ -92,4 +91,5 @@ def register_tasks(bot):
     await bot.change_presence(activity=discord.CustomActivity(name=status))
     logger.info(f"Changed status to: {status}")
 
-    bot.change_status_loop = change_status
+  bot.check_dates_loop = check_dates
+  bot.change_status_loop = change_status
