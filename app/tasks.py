@@ -77,7 +77,7 @@ def register_tasks(bot):
                     except Exception as e:
                         logger.error(f"Error notifying user {username}: {e}", exc_info=True)
 
-            if user_date <= yesterday_str:
+            if user_date < yesterday_str:
                 if role and role in member.roles and await modify_role(member, role, add=False):
                     logger.info(f"Rolle '{role_name}' entfernt für {username}.")
                     try:
