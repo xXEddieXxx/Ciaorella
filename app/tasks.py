@@ -39,7 +39,7 @@ def register_tasks(bot):
             f"## ⏰ Rückkehrtag erreicht in **{guild.name}**\n"
             f"Deine Abwesenheit auf **{guild.name}** endet heute (am {user_date})!\n\n"
             f"Möchtest du sie verlängern?",
-            view=ExtendAbsenceView()
+            view=ExtendAbsenceView(guild.id)
           )
           entry["notified"] = True
           changed = True

@@ -48,13 +48,18 @@ async def respond_invalid_date(interaction):
     await interaction.response.send_message(
         "⚠️ **Ungültiges Datum!**\nBitte verwende das Format `TT.MM.JJJJ`.", ephemeral=True)
 
+
 class DateModalExtend(discord.ui.Modal, title="Abwesenheit verlängern"):
-    date = discord.ui.TextInput(
-        label="Neues Rückkehrdatum",
-        placeholder="TT.MM.JJJJ (z.B. 31.12.2024)",
-        required=True
-    )
-    async def on_submit(self, interaction: discord.Interaction):
+  def __init__(self, guild_id):
+    super().__init__()
+    self.guild_id = guild_id
+
+  date = discord.ui.TextInput(
+    label="Neues Rückkehrdatum",
+    placeholder="TT.MM.JJJJ (z.B. 31.12.2024)",
+    required=True)
+
+  async def on_submit(self, interaction: discord.Interaction):
         valid_date = validate_date(self.date.value)
         logger.info(f"User {interaction.user} attempts to extend absence to {self.date.value}")
         if not valid_date:
@@ -82,12 +87,12 @@ class DateModalExtend(discord.ui.Modal, title="Abwesenheit verlängern"):
         await interaction.response.send_message(
             "ℹ️ **Keine aktive Abwesenheit**\nTrage zuerst ein Startdatum ein.", ephemeral=True)
 
-async def _extend_absence(interaction: discord.Interaction, weeks: int):
+async def _extend_absence(interaction: discord.Interaction, weeks: int, guild_id):
     from config import load_data, save_data
     data = load_data()
     user_id = interaction.user.id
     for entry in data:
-        if entry.get("user_id") == user_id:
+      if entry.get("user_id") == user_id and entry.get("guild_id") == guild_id:
             current_date = validate_date(entry["date"])
             if not current_date:
                 logger.warning(f"User {interaction.user} has invalid current absence date.")
@@ -112,20 +117,21 @@ async def _extend_absence(interaction: discord.Interaction, weeks: int):
         "ℹ️ **Keine aktive Abwesenheit**\nTrage zuerst ein Startdatum ein.", ephemeral=True)
 
 class ExtendAbsenceView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, guild_id):
         super().__init__(timeout=None)
+        self.guild_id = guild_id
 
     @discord.ui.button(label="+2 Wochen", style=discord.ButtonStyle.primary, emoji="⏱️", custom_id="extend_2w")
     async def set_2weeks(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await _extend_absence(interaction, weeks=2)
+        await _extend_absence(interaction, weeks=2, guild_id=self.guild_id)
 
     @discord.ui.button(label="+4 Wochen", style=discord.ButtonStyle.primary, emoji="⏳", custom_id="extend_4w")
     async def set_4weeks(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await _extend_absence(interaction, weeks=4)
+        await _extend_absence(interaction, weeks=4, guild_id=self.guild_id)
 
     @discord.ui.button(label="Individuelles Datum", style=discord.ButtonStyle.secondary, emoji="🗓️", custom_id="extend_custom")
     async def extend_absence(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(DateModalExtend())
+        await interaction.response.send_modal(DateModalExtend(guild_id=self.guild_id))
 
 class DateModal(discord.ui.Modal, title="Abwesenheit eintragen"):
     date = discord.ui.TextInput(
