@@ -85,7 +85,7 @@ def register_tasks(bot):
       "Analyziere: 87% der Spieler weinen im Stillen",
       "Folgt Minotaur LP für wahre Skills 🧠🔥",
       "Gajin hasst dich!",
-      "Andres hat wieder den Afterburner gezündet – selbst der Bot schwitzt!"
+      "Andreas hat wieder den Afterburner gezündet – selbst der Bot schwitzt!"
     ]
 
   @tasks.loop(seconds=86400)
