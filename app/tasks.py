@@ -74,22 +74,22 @@ def register_tasks(bot):
       logger.info("Absence data updated after role removals or notifications.")
     bot.check_dates_loop = check_dates
 
-    statuses = [
-        "Zählt die Panzer, die du verloren hast…",
-        "Verteidigt den Punkt mit Sarkasmus",
-        "Matchmaking sabotieren seit 2012",
-        "Campen in Spawn seit der Steinzeit",
-        "Glaubt immer noch an Teamwork",
-        "Berechne nächstes Matchmaking-Desaster…",
-        "Analyziere: 87% der Spieler weinen im Stillen",
-        "Folgt Minotaur LP für wahre Skills 🧠🔥",
-        "Gajin hasst dich!"
+  statuses = [
+      "Zählt die Panzer, die du verloren hast…",
+      "Verteidigt den Punkt mit Sarkasmus",
+      "Matchmaking sabotieren seit 2012",
+      "Campen in Spawn seit der Steinzeit",
+      "Glaubt immer noch an Teamwork",
+      "Berechne nächstes Matchmaking-Desaster…",
+      "Analyziere: 87% der Spieler weinen im Stillen",
+      "Folgt Minotaur LP für wahre Skills 🧠🔥",
+      "Gajin hasst dich!"
     ]
 
-    @tasks.loop(seconds=86400)
-    async def change_status():
-        status = random.choice(statuses)
-        await bot.change_presence(activity=discord.CustomActivity(name=status))
-        logger.info(f"Changed status to: {status}")
+  @tasks.loop(seconds=86400)
+  async def change_status():
+    status = random.choice(statuses)
+    await bot.change_presence(activity=discord.CustomActivity(name=status))
+    logger.info(f"Changed status to: {status}")
 
     bot.change_status_loop = change_status
