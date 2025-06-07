@@ -32,7 +32,31 @@ def register_tasks(bot):
       user_date = entry.get("date")
       notified = entry.get("notified")
 
-      if role and role not in member.roles:
+      if not notified and user_date == today_str:
+        user = bot.get_user(entry["user_id"])
+        if user:
+          await user.send(
+            f"## ⏰ Rückkehrtag erreicht in **{guild.name}**\n"
+            f"Deine Abwesenheit auf **{guild.name}** endet heute (am {user_date})!\n\n"
+            f"Möchtest du sie verlängern?",
+            view=ExtendAbsenceView()
+          )
+          entry["notified"] = True
+          changed = True
+        continue
+
+      if user_date < yesterday_str and role and role in member.roles:
+        if await modify_role(member, role, add=False):
+          await member.send(
+            f"## ✅ Abwesenheit beendet in **{guild.name}**\n"
+            f"Deine Abwesenheit auf **{guild.name}** ist abgelaufen ({user_date}).\n"
+            f"Rolle **{role.name}** wurde automatisch entfernt."
+          )
+          entry["remove"] = True
+          changed = True
+        continue
+
+      if user_date < yesterday_str and role and role not in member.roles:
         await member.send(
           f"## ✅ Abwesenheit beendet in **{guild.name}**\n"
           f"Die Rolle **{role.name}** wurde manuell entfernt.\n"
@@ -46,28 +70,6 @@ def register_tasks(bot):
         entry["remove"] = True
         changed = True
         continue
-
-      if not notified and user_date == today_str:
-        user = bot.get_user(entry["user_id"])
-        if user:
-          await user.send(
-            f"## ⏰ Rückkehrtag erreicht in **{guild.name}**\n"
-            f"Deine Abwesenheit auf **{guild.name}** endet heute (am {user_date})!\n\n"
-            f"Möchtest du sie verlängern?",
-            view=ExtendAbsenceView()
-          )
-          entry["notified"] = True
-          changed = True
-
-      if user_date < yesterday_str and role in member.roles:
-        if await modify_role(member, role, add=False):
-          await member.send(
-            f"## ✅ Abwesenheit beendet in **{guild.name}**\n"
-            f"Deine Abwesenheit auf **{guild.name}** ist abgelaufen ({user_date}).\n"
-            f"Rolle **{role.name}** wurde automatisch entfernt."
-          )
-          entry["remove"] = True
-          changed = True
 
     if changed:
       save_data([e for e in data if not e.get("remove")])

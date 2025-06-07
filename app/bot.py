@@ -10,9 +10,10 @@ from logger import logger
 PRODUCTION = True
 
 intents = discord.Intents.default()
-intents.guilds = True
-intents.members = True
-intents.messages = True
+intents.guilds          = True
+intents.members         = True
+intents.message_content = True
+intents.messages        = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
