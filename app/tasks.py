@@ -16,8 +16,7 @@ def register_tasks(bot):
     logger.info("Running absence check task...")
     data = load_data()
     today = datetime.now()
-    today_str = today.strftime("%d.%m.%Y")
-    yesterday_str = (today - timedelta(days=1)).strftime("%d.%m.%Y")
+    yesterday = today - timedelta(days=1)
     changed = False
 
     for entry in data:
@@ -29,15 +28,21 @@ def register_tasks(bot):
       role = get_role(guild, role_name)
       member = await get_member(guild, entry["user_id"])
       username = entry.get("username", "Unbekannt")
-      user_date = entry.get("date")
+      user_date_str = entry.get("date")
       notified = entry.get("notified")
 
-      if not notified and user_date == today_str:
+      try:
+        user_date_dt = datetime.strptime(user_date_str, "%d.%m.%Y")
+      except Exception as e:
+        logger.error(f"Bad date format for {username}: {user_date_str}")
+        continue
+
+      if not notified and user_date_dt.date() == today.date():
         user = bot.get_user(entry["user_id"])
         if user:
           await user.send(
             f"## ⏰ Rückkehrtag erreicht in **{guild.name}**\n"
-            f"Deine Abwesenheit auf **{guild.name}** endet heute (am {user_date})!\n\n"
+            f"Deine Abwesenheit auf **{guild.name}** endet heute (am {user_date_str})!\n\n"
             f"Möchtest du sie verlängern?",
             view=ExtendAbsenceView(guild.id)
           )
@@ -45,18 +50,18 @@ def register_tasks(bot):
           changed = True
         continue
 
-      if user_date < yesterday_str and role and role in member.roles:
+      if user_date_dt < yesterday and role and role in member.roles:
         if await modify_role(member, role, add=False):
           await member.send(
             f"## ✅ Abwesenheit beendet in **{guild.name}**\n"
-            f"Deine Abwesenheit auf **{guild.name}** ist abgelaufen ({user_date}).\n"
+            f"Deine Abwesenheit auf **{guild.name}** ist abgelaufen ({user_date_str}).\n"
             f"Rolle **{role.name}** wurde automatisch entfernt."
           )
           entry["remove"] = True
           changed = True
         continue
 
-      if user_date < yesterday_str and role and role not in member.roles:
+      if user_date_dt < yesterday and role and role not in member.roles:
         await member.send(
           f"## ✅ Abwesenheit beendet in **{guild.name}**\n"
           f"Die Rolle **{role.name}** wurde manuell entfernt.\n"
