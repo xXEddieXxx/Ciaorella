@@ -82,15 +82,15 @@ def register_tasks(bot):
 
   statuses = [
       "Zählt die Panzer, die du verloren hast…",
-      "Verteidigt den Punkt mit Sarkasmus",
-      "Matchmaking sabotieren seit 2012",
-      "Campen in Spawn seit der Steinzeit",
+      "Matchmaking sabotieren…",
       "Glaubt immer noch an Teamwork",
       "Berechne nächstes Matchmaking-Desaster…",
-      "Analyziere: 87% der Spieler weinen im Stillen",
+      "87% der Spieler weinen im Stillen",
       "Folgt Minotaur LP für wahre Skills 🧠🔥",
-      "Gajin hasst dich!"
-    ]
+      "Gajin hasst dich!",
+      "Nur eine gefütterte schnecke ist eine gute schnecke…",
+      "Sind die Gegner zu Stark, bist du zu schlecht…"
+  ]
 
   @tasks.loop(seconds=86400)
   async def change_status():
