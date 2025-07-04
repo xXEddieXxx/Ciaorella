@@ -1,7 +1,8 @@
 import discord
+from datetime import datetime
 from discord import app_commands, Embed
 from logger import logger
-from config import update_guild_config, get_guild_config, DEFAULT_ROLE_NAME
+from config import update_guild_config, get_guild_config, DEFAULT_ROLE_NAME, load_data
 
 def register_admin_commands(bot):
     @bot.tree.command(
@@ -119,28 +120,62 @@ def register_admin_commands(bot):
         embed.set_footer(text="Verwende /set_channel, /set_role und /set_logging_channel zum Ändern.")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-      #not Implemented YET
-"""
     @bot.tree.command(
-        name="set_language",
-        description="Erlaubt das Ändern der Sprache, die der Bot verwendet."
+        name="show_absent_users",
+        description="Zeigt alle derzeit abwesenden Benutzer und deren geplantes Rückkehrdatum."
     )
     @app_commands.checks.has_permissions(administrator=True)
-    async def set_language(interaction: discord.Interaction, language: str):
-        if language not in ["de", "en"]:
-            await interaction.response.send_message(
-                "⚠️ Ungültige Sprache! Bitte wähle entweder `de` oder `en`.",
-                ephemeral=True
-            )
+    async def show_absent_users(interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        config = get_guild_config(interaction.guild.id)
+        role_name = config.get("role_name", DEFAULT_ROLE_NAME)
+        absence_role = discord.utils.get(interaction.guild.roles, name=role_name)
+
+        if absence_role is None:
+            await interaction.followup.send(f"⚠️ Die Abwesenheitsrolle `{role_name}` existiert nicht auf diesem Server.", ephemeral=True)
             return
 
-        update_guild_config(interaction.guild.id, language=language)
-        readable = "Deutsch" if language == "de" else "Englisch"
-        await interaction.response.send_message(
-            f"🌐 **Sprache gesetzt!**\nDer Bot verwendet jetzt **{readable}**.",
-            ephemeral=True
+        absent_members = absence_role.members
+        if not absent_members:
+            await interaction.followup.send("✅ Es sind derzeit keine Benutzer als abwesend markiert.", ephemeral=True)
+            return
+
+        data = load_data()
+        guild_data = [entry for entry in data if entry["guild_id"] == interaction.guild.id]
+
+        embed = discord.Embed(
+            title="📋 Aktuell Abwesende Mitglieder",
+            description="Hier ist eine Liste der derzeit abwesenden Mitglieder und deren Rückkehrdatum.",
+            color=0x3498db
         )
-"""
+
+        for member in absent_members:
+            entry = next((e for e in guild_data if e["user_id"] == member.id), None)
+            if entry:
+                return_date_str = entry["date"]
+                try:
+                    return_date = datetime.strptime(return_date_str, "%d.%m.%Y")
+                    time_remaining = discord.utils.format_dt(return_date, style='R')
+                    embed.add_field(
+                        name=member.display_name,
+                        value=f"Rückkehrdatum: **{return_date_str}**\n{time_remaining}",
+                        inline=False
+                    )
+                except Exception:
+                    embed.add_field(
+                        name=member.display_name,
+                        value=f"Ungültiges Datum gespeichert: `{return_date_str}`",
+                        inline=False
+                    )
+            else:
+                embed.add_field(
+                    name=member.display_name,
+                    value="⚠️ Kein Abwesenheitseintrag gefunden.",
+                    inline=False
+                )
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 async def _delete_absence_embeds(channel: discord.TextChannel, bot: discord.Client):
