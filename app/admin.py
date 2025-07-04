@@ -126,55 +126,43 @@ def register_admin_commands(bot):
     )
     @app_commands.checks.has_permissions(administrator=True)
     async def show_absent_users(interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+      await interaction.response.defer(ephemeral=True)
+      data = load_data()
 
-        config = get_guild_config(interaction.guild.id)
-        role_name = config.get("role_name", DEFAULT_ROLE_NAME)
-        absence_role = discord.utils.get(interaction.guild.roles, name=role_name)
+      guild_data = [entry for entry in data if entry["guild_id"] == interaction.guild.id]
 
-        if absence_role is None:
-            await interaction.followup.send(f"⚠️ Die Abwesenheitsrolle `{role_name}` existiert nicht auf diesem Server.", ephemeral=True)
-            return
+      if not guild_data:
+        await interaction.followup.send("✅ Es sind derzeit keine Benutzer als abwesend markiert.", ephemeral=True)
+        return
 
-        absent_members = absence_role.members
-        if not absent_members:
-            await interaction.followup.send("✅ Es sind derzeit keine Benutzer als abwesend markiert.", ephemeral=True)
-            return
+      embed = discord.Embed(
+        title="📋 Aktuell Abwesende Mitglieder",
+        description="Hier ist eine Liste der derzeit abwesenden Mitglieder und deren Rückkehrdatum.",
+        color=0x3498db
+      )
 
-        data = load_data()
-        guild_data = [entry for entry in data if entry["guild_id"] == interaction.guild.id]
+      for entry in guild_data:
+        member = interaction.guild.get_member(entry["user_id"])
+        if member:
+          return_date_str = entry["date"]
+          try:
+            return_date = datetime.strptime(return_date_str, "%d.%m.%Y")
+            time_remaining = discord.utils.format_dt(return_date, style='R')
+            embed.add_field(
+              name=member.display_name,
+              value=f"Rückkehrdatum: **{return_date_str}**\n{time_remaining}",
+              inline=False
+            )
+          except Exception:
+            embed.add_field(
+              name=member.display_name,
+              value=f"Ungültiges Datum gespeichert: `{return_date_str}`",
+              inline=False
+            )
 
-        embed = discord.Embed(
-            title="📋 Aktuell Abwesende Mitglieder",
-            description="Hier ist eine Liste der derzeit abwesenden Mitglieder und deren Rückkehrdatum.",
-            color=0x3498db
-        )
-
-        for member in absent_members:
-            entry = next((e for e in guild_data if e["user_id"] == member.id), None)
-            if entry:
-                return_date_str = entry["date"]
-                try:
-                    return_date = datetime.strptime(return_date_str, "%d.%m.%Y")
-                    time_remaining = discord.utils.format_dt(return_date, style='R')
-                    embed.add_field(
-                        name=member.display_name,
-                        value=f"Rückkehrdatum: **{return_date_str}**\n{time_remaining}",
-                        inline=False
-                    )
-                except Exception:
-                    embed.add_field(
-                        name=member.display_name,
-                        value=f"Ungültiges Datum gespeichert: `{return_date_str}`",
-                        inline=False
-                    )
-            else:
-                embed.add_field(
-                    name=member.display_name,
-                    value="⚠️ Kein Abwesenheitseintrag gefunden.",
-                    inline=False
-                )
-
+      if not embed.fields:
+        await interaction.followup.send("✅ Es sind derzeit keine abwesenden Benutzer im Server.", ephemeral=True)
+      else:
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
