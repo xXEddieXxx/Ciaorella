@@ -7,7 +7,7 @@ from tasks import register_tasks
 from events import register_events
 from logger import logger
 
-PRODUCTION = False
+PRODUCTION = True
 
 intents = discord.Intents.default()
 intents.guilds          = True
