@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.app_commands import locale_str
 
-from app.localization import t
+from localization import t
 
 
 class TableTranslator(app_commands.Translator):
