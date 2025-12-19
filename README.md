@@ -4,8 +4,6 @@ Installation (Invite Link): https://discord.com/oauth2/authorize?client_id=13798
 
 Discord bot for **absence management** – featuring role automation, logging, and intuitive button/Slash-Command controls.
 
-![Banner](https://pbs.twimg.com/media/DtFE2_BX4AECJ8a.jpg:large)
-
 ---
 ## Features
 
