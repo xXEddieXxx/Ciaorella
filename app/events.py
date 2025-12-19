@@ -1,8 +1,8 @@
 import discord
 
-from app.absence import AbwesenheitView, build_manager_embed
-from app.command_translator import TableTranslator
-from app.localization import tg
+from absence import AbwesenheitView, build_manager_embed
+from command_translator import TableTranslator
+from localization import tg
 from config import ensure_single_embed, get_guild_config, get_role, DEFAULT_ROLE_NAME, remove_entry
 from logger import logger
 

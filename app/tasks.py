@@ -1,17 +1,16 @@
-# tasks.py
 import random
 from datetime import datetime
 import discord
 from discord import Forbidden, HTTPException
 from discord.ext import tasks
 
-from app.localization import tg
+from localization import tg
 from config import (
     load_data, save_data, get_guild_config,
     get_member, get_role, modify_role, DEFAULT_ROLE_NAME
 )
 from logger import logger
-from app.absence import ExtendAbsenceView
+from absence import ExtendAbsenceView
 
 
 def register_tasks(bot):

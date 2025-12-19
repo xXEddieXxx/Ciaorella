@@ -3,9 +3,8 @@ from datetime import datetime
 from discord import app_commands
 from discord.app_commands import locale_str
 
-from app.absence import AbwesenheitView, build_manager_embed
-from app.localization import SUPPORTED_LANGUAGES, tg
-from logger import logger
+from absence import AbwesenheitView, build_manager_embed
+from localization import SUPPORTED_LANGUAGES, tg
 from config import update_guild_config, get_guild_config, DEFAULT_ROLE_NAME, load_data, ABSENCE_MANAGER_THUMB_URL
 
 

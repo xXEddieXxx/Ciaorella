@@ -1,7 +1,7 @@
 from __future__ import annotations
 import discord
 from datetime import datetime, timedelta
-from app.localization import tg
+from localization import tg
 from config import (
     get_guild_config, get_role, get_member, modify_role,
     validate_date, add_or_update_entry, remove_entry, DEFAULT_ROLE_NAME, ABSENCE_MANAGER_THUMB_URL
