@@ -92,6 +92,7 @@ Discord bot for **absence management** – featuring role automation, logging, a
 - `/set_role <Rollenname>` – Sets the absence role name (role must exist)
 - `/set_logging_channel <#log-channel>` – Sets logging channel 
 - `/show_config` – Shows current server configuration
+- `/set_language` – changes the language of the bot (de, en currently supported)
 
 *Configuration changes require administrator permissions.*
 
