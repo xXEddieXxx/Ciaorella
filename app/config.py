@@ -5,6 +5,7 @@ from logger import logger
 DATA_FILE = "config/dates.json"
 CONFIG_FILE = "config/guild_config.json"
 DEFAULT_ROLE_NAME = "Abwesend"
+ABSENCE_MANAGER_THUMB_URL = "https://pbs.twimg.com/media/DtFE2_BX4AECJ8a.jpg:large"
 
 DATE_PATTERN = re.compile(
     r"^(?:31\.(?:0[13578]|1[02])\.\d{4}|"
@@ -44,7 +45,12 @@ def update_guild_config(guild_id, **kwargs):
     config = load_config()
     guild_id = str(guild_id)
     if guild_id not in config:
-        config[guild_id] = {"channel_id": None, "role_name": DEFAULT_ROLE_NAME}
+        config[guild_id] = {
+            "channel_id": None,
+            "role_name": DEFAULT_ROLE_NAME,
+            "logging_channel_id": None,
+            "language": "de",
+        }
     for key, value in kwargs.items():
         if value is not None:
             config[guild_id][key] = value
@@ -146,11 +152,11 @@ def is_admin_or_owner(ctx):
 
 async def ensure_single_embed(channel, bot, embed, view):
   def is_absence_embed(message):
-    return (
-      message.author == bot.user and
-      message.embeds and
-      message.embeds[0].title == "📅 Abwesenheitsmanager"
-    )
+    if message.author != bot.user or not message.embeds:
+        return False
+    emb = message.embeds[0]
+    thumb_url = emb.thumbnail.url if emb.thumbnail else None
+    return thumb_url == ABSENCE_MANAGER_THUMB_URL
 
   messages = [m async for m in channel.history(limit=50)]
   bot_embeds = [m for m in messages if is_absence_embed(m)]
